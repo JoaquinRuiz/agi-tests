@@ -24,15 +24,51 @@ import json
 from pathlib import Path
 
 
+def cargar_env() -> None:
+    """Carga el .env del proyecto.
+
+    El toolkit de ARC ya usa python-dotenv por su cuenta, así que ARC_API_KEY
+    llegaba sola y este fallo no se veía hasta que el script necesitaba su propia
+    clave. Si dotenv no está instalado, parseamos el fichero a mano: son seis
+    líneas y evita una dependencia por algo tan tonto.
+    """
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv()
+        return
+    except ImportError:
+        pass
+
+    import os
+    from pathlib import Path as _P
+
+    for ruta in (_P(".env"), _P(__file__).parent / ".env"):
+        if not ruta.is_file():
+            continue
+        for linea in ruta.read_text(encoding="utf-8").splitlines():
+            linea = linea.strip()
+            if not linea or linea.startswith("#") or "=" not in linea:
+                continue
+            clave, _, valor = linea.partition("=")
+            os.environ.setdefault(clave.strip(), valor.strip().strip("'\""))
+        return
+
+
 def hacer_cliente(modelo: str):
     """Cliente único vía OpenRouter. Cambiar de proveedor es cambiar el string."""
     import os
 
     from openai import OpenAI
 
+    cargar_env()
     clave = os.environ.get("OPENROUTER_API_KEY")
     if not clave:
-        raise SystemExit("Falta OPENROUTER_API_KEY en el entorno.")
+        raise SystemExit(
+            "Falta OPENROUTER_API_KEY. Ponla en el .env del proyecto:\n"
+            "    echo 'OPENROUTER_API_KEY=sk-or-...' >> .env\n"
+            "o expórtala en la terminal."
+        )
 
     cli = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=clave)
 

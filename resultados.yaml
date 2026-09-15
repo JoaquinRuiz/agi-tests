@@ -3,10 +3,11 @@
 # y tampoco es un aprobado.
 
 gpt-6-astra:
-  fluida: null            # nivel alcanzado / nivel que alcanzaste tú. 1.0 = empate
+  fluida: 0.14            # 1 nivel completado de los 7 de ls20
   # Medido: 1 nivel con harness persistente, 0 sin él. Caída relativa = 1.0
   andamiaje: 1.0          # (persistente - amnesico) / persistente
-  memoria: null           # true si retiene en sesión limpia, false si no
+  # Sesión 1: "inventario__revisado__030" (correcto). Sesión 2 limpia: no lo conoce.
+  memoria: false          # true si retiene en sesión limpia, false si no
   horizonte: null         # horas al 80% de fiabilidad
   coherencia: null        # mínimo entre los anteriores, normalizado 0-1
 
