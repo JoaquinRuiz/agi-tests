@@ -12,12 +12,13 @@ tests:
   - id: fluida
     nombre: Inteligencia fluida ante lo novedoso
     pregunta: ¿Resuelve problemas cuya regla no ha visto nunca?
-    metrica: nivel_alcanzado_vs_humano
-    criterio: ">= 1.0"     # 1.0 = igual que un humano que juega por primera vez
-    fuente: ARC-AGI-3, entorno jugado en local
+    metrica: fraccion_niveles_completados
+    criterio: ">= 1.0"     # 1.0 = termina el juego, que es lo que hace un humano
+    fuente: ejecución propia en ls20 (7 niveles) · baseline humano publicado por ARC
     nota: >
-      ARC-AGI-1 y 2 están saturados. Un 95% ahí ya no distingue nada,
-      así que este test se puntúa con el entorno interactivo.
+      ARC-AGI-1 y 2 están saturados. Un 95% ahí ya no distingue nada, así que
+      este test se puntúa con el entorno interactivo. El listón es el dato
+      publicado por ARC: los humanos resuelven el 100% de los entornos.
 
   - id: andamiaje
     nombre: Independencia del andamiaje
