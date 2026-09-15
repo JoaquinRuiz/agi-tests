@@ -1,0 +1,14 @@
+[project]
+name = "arc-test"
+version = "0.1.0"
+description = "Tres scripts para replicar en pequeño las pruebas de ARC-AGI-3 del vídeo '¿Es GPT-6 AGI?'"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Joaquín Ruiz" }]
+requires-python = ">=3.12"
+dependencies = [
+    "arc-agi>=0.9.9",
+    "openai>=1.0.0",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0.0",
+]

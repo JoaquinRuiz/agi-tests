@@ -1,0 +1,19 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Secretos: la clave real vive en .env, que no se sube. Se versiona .env.example.
+.env
+
+# Ajustes locales de Claude Code
+.claude/
+
+# Salida de las ejecuciones
+runs/

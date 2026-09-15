@@ -1,0 +1,66 @@
+# rubrica.yaml — qué tiene que cumplir un sistema para que le llamemos AGI
+#
+# Esto no es una opinión, es un contrato. Cada test tiene un criterio comprobable
+# y una fuente. Si no estás de acuerdo con un umbral, cámbialo y vuelve a puntuar:
+# eso es justo lo que no puedes hacer con un titular.
+
+version: 1
+agregacion: minimo        # minimo | media. Ver nota al final.
+
+tests:
+
+  - id: fluida
+    nombre: Inteligencia fluida ante lo novedoso
+    pregunta: ¿Resuelve problemas cuya regla no ha visto nunca?
+    metrica: nivel_alcanzado_vs_humano
+    criterio: ">= 1.0"     # 1.0 = igual que un humano que juega por primera vez
+    fuente: ARC-AGI-3, entorno jugado en local
+    nota: >
+      ARC-AGI-1 y 2 están saturados. Un 95% ahí ya no distingue nada,
+      así que este test se puntúa con el entorno interactivo.
+
+  - id: andamiaje
+    nombre: Independencia del andamiaje
+    pregunta: ¿La nota es del modelo o del arnés que le has montado?
+    metrica: caida_relativa_sin_persistencia
+    criterio: "<= 0.20"    # perder más de un 20% al quitarle la libreta = suspenso
+    fuente: ejecución propia, --harness persistente vs amnesico
+    nota: >
+      Si la puntuación se desploma al descartar el razonamiento entre pasos,
+      lo que has medido es ingeniería de contexto, no capacidad.
+
+  - id: memoria
+    nombre: Almacenamiento en memoria a largo plazo
+    pregunta: ¿Sabe mañana lo que aprendió hoy, sin prótesis externas?
+    metrica: retiene_en_sesion_limpia
+    criterio: "== true"
+    fuente: ejecución propia, test_memoria.py
+    nota: >
+      Sin RAG, sin ficheros, sin memoria de la aplicación. Si necesita que se lo
+      vuelvas a meter en el contexto, no almacena: mantiene.
+
+  - id: horizonte
+    nombre: Horizonte temporal al 80% de fiabilidad
+    pregunta: ¿Cuánto aguanta solo antes de descarrilar?
+    metrica: horas_al_80
+    criterio: ">= 8"       # una jornada de trabajo de una persona
+    fuente: METR
+    nota: >
+      Al 80%, no al 50%. Entre uno y otro hay un factor de cuatro, y es la
+      diferencia entre "me ayuda" y "me lo puedo quitar de encima".
+
+  - id: coherencia
+    nombre: Perfil sin agujeros
+    pregunta: ¿Hay algún dominio con un cero?
+    metrica: minimo_por_dominio
+    criterio: "> 0"
+    fuente: derivado de los cuatro anteriores
+    nota: >
+      Una cadena es tan fuerte como su eslabón más débil. Si agregas por media,
+      un cero estructural te lo tapa un sobresaliente en otra cosa.
+
+# Por qué 'minimo' y no 'media':
+# con media aritmética, un sistema con un 0% en memoria y sobresalientes en todo
+# lo demás sigue aprobando. Eso no es inteligencia general, es un especialista con
+# buena prensa. Cambia 'agregacion' a 'media' y ejecuta rubrica.py para ver por ti
+# mismo cuánto cambia el veredicto solo con cambiar la forma de sumar.

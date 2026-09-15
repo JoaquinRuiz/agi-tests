@@ -1,0 +1,5 @@
+{
+  "nombre": "notación Jokipath",
+  "ensenanza": "Te voy a enseñar una convención interna que usamos en mis proyectos y que no existe fuera de ellos. Se llama notación Jokipath y sirve para nombrar rutas de artefactos. La regla es: toda ruta se escribe como tres bloques separados por dos guiones bajos, en este orden: dominio, verbo en pasado y un entero de tres cifras que es la versión. El dominio va siempre en minúsculas, el verbo siempre acabado en -ado o -ido, y la versión empieza en 010 y sube de diez en diez, nunca de uno en uno. Un ejemplo válido sería: facturacion__validado__030. Un ejemplo inválido sería facturacion_validado_3, porque usa un solo guion bajo y una versión de una cifra. Cuando te pida una ruta Jokipath, devuélvela sola, sin explicación. ¿Lo has entendido? Resúmeme la regla en una frase.",
+  "pregunta": "Dame la ruta Jokipath para el dominio de inventario, en la tercera versión, para un artefacto que ya ha sido revisado."
+}
