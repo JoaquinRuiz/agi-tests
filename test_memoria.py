@@ -23,10 +23,6 @@ import argparse
 import json
 from pathlib import Path
 
-from dotenv import load_dotenv
-
-load_dotenv()  # lee OPENROUTER_API_KEY de .env si existe
-
 
 def hacer_cliente(modelo: str):
     """Cliente único vía OpenRouter. Cambiar de proveedor es cambiar el string."""
@@ -41,8 +37,28 @@ def hacer_cliente(modelo: str):
     cli = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=clave)
 
     def pedir(mensajes):
-        r = cli.chat.completions.create(model=modelo, messages=mensajes)
-        return r.choices[0].message.content
+        r = cli.chat.completions.create(
+            model=modelo,
+            messages=mensajes,
+            # Sin esto, los modelos que razonan antes de responder se quedan sin
+            # presupuesto y devuelven content vacío o None. Un turno vacío invalida
+            # el test: no puedes decir que algo se ha olvidado si nunca lo aprendió.
+            max_tokens=2000,
+        )
+        msg = r.choices[0].message
+        texto = msg.content
+
+        # Algunos proveedores devuelven el razonamiento aparte del contenido
+        if not texto:
+            texto = getattr(msg, "reasoning", None) or ""
+
+        if not texto.strip():
+            raise SystemExit(
+                f"\n[ERROR] {modelo} devolvió una respuesta vacía "
+                f"(finish_reason={r.choices[0].finish_reason}).\n"
+                f"        Sube max_tokens o revisa el modelo. NO uses este run.\n"
+            )
+        return texto
 
     return pedir
 
@@ -77,6 +93,12 @@ def main() -> None:
     respuesta_1 = pedir(s1)
     print("\n--- SESIÓN 1: aplicación inmediata ---\n")
     print(respuesta_1)
+
+    if len(respuesta_1.strip()) < 3:
+        raise SystemExit(
+            "\n[ERROR] La sesión 1 no produjo una aplicación válida del concepto.\n"
+            "        Sin eso el test no mide nada: descarta este run.\n"
+        )
 
     # ---- SESIÓN 2: sesión nueva, sin absolutamente nada de contexto -------
     print("\n--- SESIÓN 2: sesión limpia, sin historial ---\n")
