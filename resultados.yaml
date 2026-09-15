@@ -8,17 +8,19 @@ gpt-6-astra:
   andamiaje: 1.0          # (persistente - amnesico) / persistente
   # Sesión 1: "inventario__revisado__030" (correcto). Sesión 2 limpia: no lo conoce.
   memoria: false          # true si retiene en sesión limpia, false si no
-  horizonte: null         # horas al 80% de fiabilidad
-  coherencia: null        # mínimo entre los anteriores, normalizado 0-1
+  horizonte: null         # horas al 80% de fiabilidad (dato prestado, no medido aquí)
+  coherencia: 0           # mínimo entre los anteriores, normalizado 0-1
 
 claude-fable-5-1:
   # Las pruebas de ARC con este modelo no se han pagado: quedan como SIN MEDIR.
   # Un hueco no es un cero. El script lo imprime en gris, no en rojo.
   fluida: null
   andamiaje: null
-  memoria: null
+  # Sesión 1: "inventario__revisado__030" con la regla bien razonada.
+  # Sesión 2 limpia: no conoce la convención y pide la especificación.
+  memoria: false
   horizonte: null
-  coherencia: null
+  coherencia: 0
 
 azar:
   fluida: null            # la línea base. Si el modelo no la supera, no hay debate.
