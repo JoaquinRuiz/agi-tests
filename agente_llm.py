@@ -24,15 +24,13 @@ Requiere OPENROUTER_API_KEY.
 
 import argparse
 import json
+import sys
 import time
 from collections import Counter
 from pathlib import Path
 
 import arc_agi
 from arcengine import GameAction, GameState
-from dotenv import load_dotenv
-
-load_dotenv()  # lee las claves de .env si existe
 
 SISTEMA = """Estás jugando a un videojuego que no has visto nunca. Nadie te va a explicar las reglas.
 Tu trabajo es descubrir la mecánica explorando y luego completar los niveles.
@@ -51,24 +49,110 @@ El campo "notas" es tu libreta: úsalo para anotar lo que has aprendido de la me
 # --------------------------------------------------------------------------
 # Serialización del frame
 # --------------------------------------------------------------------------
-def frame_a_texto(obs) -> str:
-    """Convierte la observación en texto compacto para el prompt.
+def _es_sec(x) -> bool:
+    """Secuencia indexable que no es texto: lista, tupla, array de numpy..."""
+    return hasattr(x, "__len__") and hasattr(x, "__getitem__") and not isinstance(x, (str, bytes, dict))
 
-    El nombre del campo que contiene la rejilla puede cambiar entre versiones del
-    toolkit, así que probamos varios y, si no encontramos ninguno, caemos a repr().
+
+def _profundidad(x, tope: int = 6) -> int:
+    """Cuántos niveles de anidamiento tiene antes de llegar a una hoja."""
+    n = 0
+    while _es_sec(x) and len(x) and n < tope:
+        x = x[0]
+        n += 1
+    return n
+
+
+def _rejilla(datos):
+    """Normaliza a una rejilla 2D, sea cual sea el tipo exacto del contenedor.
+
+    No exige listas ni enteros: el toolkit puede devolver tuplas, arrays o enteros
+    de numpy, y exigir isinstance(x, list) hacía que la rejilla se descartara en
+    silencio. Aquí solo miramos la FORMA: bajamos niveles hasta que quedan dos
+    (filas y celdas).
     """
+    if not _es_sec(datos) or not len(datos):
+        return None
+
+    r = datos
+    # El toolkit envuelve la rejilla en una lista por capa/tick: frame=[grid]
+    while _profundidad(r) > 2:
+        r = r[-1]
+
+    if _profundidad(r) == 2 and len(r) and _es_sec(r[0]) and len(r[0]):
+        return r
+    return None
+
+
+def frame_a_texto(obs) -> str:
+    """Convierte la observación en la rejilla de texto que ve el modelo.
+
+    En ARC-AGI-3 la rejilla llega en obs.frame como [grid], donde grid son 64 filas
+    de 64 enteros (un color por número). Probamos el acceso directo y, si falla,
+    el model_dump() de pydantic, que nunca miente.
+
+    Si no la encuentra, AVISA por stderr y devuelve una marca visible. Nunca cae en
+    silencio a repr(): un frame malo invalida la partida entera y es mejor que reviente
+    aquí que descubrirlo después de haber pagado la ejecución.
+    """
+    candidatos = []
+
     for campo in ("frame", "frames", "grid", "observation"):
-        datos = getattr(obs, campo, None)
-        if datos is None:
-            continue
-        rejilla = datos
-        # Algunas versiones devuelven una lista de rejillas (una por capa/tick)
-        while isinstance(rejilla, list) and rejilla and isinstance(rejilla[0], list) \
-                and rejilla[0] and isinstance(rejilla[0][0], list):
-            rejilla = rejilla[-1]
-        if isinstance(rejilla, list) and rejilla and isinstance(rejilla[0], list):
-            return "\n".join("".join(f"{c:x}" for c in fila) for fila in rejilla)
-    return repr(obs)[:4000]
+        candidatos.append(getattr(obs, campo, None))
+
+    volcado = getattr(obs, "model_dump", None)
+    if callable(volcado):
+        try:
+            d = volcado()
+            for campo in ("frame", "frames", "grid", "observation"):
+                if campo in d:
+                    candidatos.append(d[campo])
+        except Exception:  # noqa: BLE001
+            pass
+
+    for datos in candidatos:
+        rejilla = _rejilla(datos)
+        if rejilla is not None:
+            return "\n".join(
+                "".join(f"{int(c):x}" if int(c) < 16 else "?" for c in fila)
+                for fila in rejilla
+            )
+
+    print("\n[AVISO] No encuentro la rejilla en la observación.", file=sys.stderr)
+    print(f"[AVISO] Tipo: {type(obs).__name__}. Lanza --dump-prompt y revisa.",
+          file=sys.stderr)
+    return "(SIN REJILLA - el agente está jugando a ciegas)"
+
+
+def frame_inicial(env):
+    """Consigue la primera observación SIN gastar una acción.
+
+    Sin esto, el turno 0 llega al modelo sin tablero y su primera decisión es a
+    ciegas, lo cual contamina toda la partida: la jugada 1 es aleatoria por
+    construcción. reset() devuelve el estado inicial en la mayoría de versiones;
+    si no, lo buscamos en el propio entorno.
+    """
+    obs = env.reset()
+    if obs is not None:
+        return obs
+    for campo in ("last_frame", "frame", "last_observation", "_last_frame"):
+        candidato = getattr(env, campo, None)
+        if candidato is not None:
+            return candidato
+    return None
+
+
+def describir_obs(obs) -> str:
+    """Radiografía del objeto para cuando frame_a_texto() no encuentra la rejilla."""
+    if obs is None:
+        return "obs es None"
+    campos = [a for a in dir(obs) if not a.startswith("_") and not callable(getattr(obs, a, None))]
+    lineas = [f"tipo: {type(obs).__name__}", f"campos: {', '.join(campos)}"]
+    for c in campos:
+        v = getattr(obs, c, None)
+        resumen = f"lista de {len(v)}" if isinstance(v, list) else repr(v)[:60]
+        lineas.append(f"  .{c} = {resumen}")
+    return "\n".join(lineas)
 
 
 def acciones_disponibles(env) -> str:
@@ -162,6 +246,9 @@ def main() -> None:
     p.add_argument("--max-acciones", type=int, default=80)
     p.add_argument("--ventana", type=int, default=30, help="turnos de historial que se conservan en modo persistente")
     p.add_argument("--out", default=None)
+    p.add_argument("--dump-prompt", action="store_true",
+                   help="imprime el primer prompt tal y como lo recibe el modelo y sale. "
+                        "Úsalo SIEMPRE antes de una tanda de verdad.")
     args = p.parse_args()
 
     salida = Path(args.out or f"runs/{args.model.replace(chr(47), chr(45))}_{args.harness}.jsonl")
@@ -170,7 +257,7 @@ def main() -> None:
 
     cliente = ClienteOpenRouter(args.model)
     arc = arc_agi.Arcade()
-    env = arc.make(args.game, render_mode="terminal")
+    env = arc.make(args.game, render_mode="terminal", include_frame_data=True)
     if env is None:
         raise SystemExit("No se pudo crear el entorno. ¿ARC_API_KEY bien puesta?")
 
@@ -181,7 +268,7 @@ def main() -> None:
     resultado = "sin_terminar"
     vistas = Counter()          # (hash del frame, acción) -> veces. Detector de bucles
     t0 = time.time()
-    obs = None
+    obs = frame_inicial(env)
     paso = 0
 
     for paso in range(args.max_acciones):
@@ -199,6 +286,20 @@ def main() -> None:
             # Con historial reciente y con la libreta que él mismo escribió.
             turno += f"Tus notas previas: {notas or '(ninguna todavía)'}\nPantalla actual:\n{pantalla}"
             mensajes = historial[-args.ventana * 2 :] + [{"role": "user", "content": turno}]
+
+        if args.dump_prompt:
+            print("\n" + "=" * 62)
+            print("  ESTO ES LO QUE VE EL MODELO (turno 0)")
+            print("=" * 62)
+            print(mensajes[-1]["content"])
+            print("=" * 62)
+            print(f"  Caracteres de la pantalla: {len(pantalla)}")
+            print("\n  --- radiografía de la observación ---")
+            print("  " + describir_obs(obs).replace("\n", "\n  "))
+            print(f"  Primera línea: {pantalla.splitlines()[0][:80] if pantalla else '(vacía)'}")
+            print("  Si esto no parece una rejilla de colores, frame_a_texto() no")
+            print("  encuentra el campo. Revisa el objeto crudo antes de gastar dinero.\n")
+            return
 
         try:
             bruto, tokens = cliente.pedir(mensajes)
