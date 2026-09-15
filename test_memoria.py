@@ -55,7 +55,7 @@ def cargar_env() -> None:
         return
 
 
-def hacer_cliente(modelo: str):
+def hacer_cliente(modelo: str, max_tokens: int = 2000, proveedor: str | None = None):
     """Cliente único vía OpenRouter. Cambiar de proveedor es cambiar el string."""
     import os
 
@@ -72,14 +72,22 @@ def hacer_cliente(modelo: str):
 
     cli = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=clave)
 
+    extra = {}
+    if proveedor:
+        # Fija el proveedor y prohíbe el fallback. OpenRouter sirve el mismo modelo
+        # desde varias casas y algunas aplican filtrado propio, así que sin fijarlo
+        # puedes recibir un content_filter que no viene del laboratorio original.
+        extra["provider"] = {"order": [proveedor], "allow_fallbacks": False}
+
     def pedir(mensajes):
         r = cli.chat.completions.create(
             model=modelo,
             messages=mensajes,
+            extra_body=extra or None,
             # Sin esto, los modelos que razonan antes de responder se quedan sin
             # presupuesto y devuelven content vacío o None. Un turno vacío invalida
             # el test: no puedes decir que algo se ha olvidado si nunca lo aprendió.
-            max_tokens=2000,
+            max_tokens=max_tokens,
         )
         msg = r.choices[0].message
         texto = msg.content
@@ -89,10 +97,21 @@ def hacer_cliente(modelo: str):
             texto = getattr(msg, "reasoning", None) or ""
 
         if not texto.strip():
+            motivo = r.choices[0].finish_reason
+            pistas = {
+                "length": "Se quedó sin presupuesto: sube --max-tokens.",
+                "content_filter": (
+                    "Un filtro de contenido del proveedor ha bloqueado la respuesta.\n"
+                    "        No es cosa de tu prompt. Fija el proveedor original:\n"
+                    "            --proveedor anthropic\n"
+                    "        y si insiste, reintenta: suele ser intermitente."
+                ),
+            }
             raise SystemExit(
                 f"\n[ERROR] {modelo} devolvió una respuesta vacía "
-                f"(finish_reason={r.choices[0].finish_reason}).\n"
-                f"        Sube max_tokens o revisa el modelo. NO uses este run.\n"
+                f"(finish_reason={motivo}).\n"
+                f"        {pistas.get(motivo, 'Revisa el modelo.')}\n"
+                f"        NO uses este run.\n"
             )
         return texto
 
@@ -105,10 +124,14 @@ def main() -> None:
                    help="identificador de OpenRouter, p.ej. openai/gpt-6-astra")
     p.add_argument("--concepto", default="concepto.json")
     p.add_argument("--out", default=None)
+    p.add_argument("--max-tokens", type=int, default=2000)
+    p.add_argument("--proveedor", default=None,
+                   help="fija el proveedor de OpenRouter (p.ej. anthropic, openai) "
+                        "y desactiva el fallback")
     args = p.parse_args()
 
     c = json.loads(Path(args.concepto).read_text(encoding="utf-8"))
-    pedir = hacer_cliente(args.model)
+    pedir = hacer_cliente(args.model, args.max_tokens, args.proveedor)
 
     print("\n" + "=" * 60)
     print(f"  TEST DE MEMORIA — {args.model}")
