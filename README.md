@@ -99,17 +99,6 @@ Ni el agente ni el test de memoria tocan estos ficheros: la rúbrica es una capa
 solo lee lo que tú anotas. Por eso `pyyaml` es dependencia del proyecto aunque los otros
 scripts no la usen.
 
-## Alcance
-
-Los scripts están ejecutados contra la API real del toolkit (`arc_agi.Arcade`, `env.make`,
-`env.step`, `arc.get_scorecard`). Lo único que te tocará cambiar son **los identificadores
-de modelo**: ponlos como aparezcan en el catálogo de OpenRouter, que es también donde ves
-el precio por millón de tokens antes de lanzar.
-
-Y el aviso que conviene decir también en el vídeo: esto no es una evaluación oficial. La
-evaluación oficial de ARC-AGI-3 sobre GPT-6 Astra costó veintiséis mil dólares en el run del
-harness estándar. Lo que haces aquí es una réplica casera del *efecto*, no del número.
-
 ## Licencia
 
 Publicado bajo la licencia [MIT](LICENSE).
