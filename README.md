@@ -3,6 +3,8 @@
 Tres scripts para responder con datos a la pregunta del título, en lugar de con titulares,
 más una rúbrica para convertir esos datos en una nota repetible.
 
+📺 **Vídeo:** [¿Es GPT-6 AGI?](https://www.youtube.com/watch?v=n5QAvo1QeOI)
+
 > ⚠️ Estos scripts están escritos contra la API pública del toolkit ARC-AGI-3 tal y como
 > está documentada, pero **no se han podido ejecutar contra la API real**. Trátalos como un
 > primer arranque, no como código probado en producción. Lee la sección "Avisos honestos".

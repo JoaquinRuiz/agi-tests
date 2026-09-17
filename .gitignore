@@ -17,3 +17,6 @@ wheels/
 
 # Salida de las ejecuciones
 runs/
+
+# Juegos descargados por arc_agi (regenerables; además contienen el código del juego)
+environment_files/
