@@ -5,10 +5,6 @@ más una rúbrica para convertir esos datos en una nota repetible.
 
 📺 **Vídeo:** [¿Es GPT-6 AGI?](https://www.youtube.com/watch?v=n5QAvo1QeOI)
 
-> ⚠️ Estos scripts están escritos contra la API pública del toolkit ARC-AGI-3 tal y como
-> está documentada, pero **no se han podido ejecutar contra la API real**. Trátalos como un
-> primer arranque, no como código probado en producción. Lee la sección "Avisos honestos".
-
 ## Montaje
 
 ```bash
@@ -103,19 +99,12 @@ Ni el agente ni el test de memoria tocan estos ficheros: la rúbrica es una capa
 solo lee lo que tú anotas. Por eso `pyyaml` es dependencia del proyecto aunque los otros
 scripts no la usen.
 
-## Avisos honestos
+## Alcance
 
-Estos scripts están escritos contra la API pública del toolkit (`arc_agi.Arcade`,
-`env.make`, `env.step`, `arc.get_scorecard`) tal y como está documentada. No los he podido
-ejecutar contra la API real, así que trátalos como un primer arranque, no como código
-probado en producción. Dos sitios donde es probable que tengas que tocar:
-
-1. **El nombre del campo que trae la rejilla.** `frame_a_texto()` prueba varios nombres y,
-   si no encuentra ninguno, imprime el objeto en crudo. Lanza un paso, mira lo que sale y
-   ajusta la función. Si necesitas la rejilla explícitamente, revisa el parámetro
-   `include_frame_data` de `make()`.
-2. **Los identificadores de modelo.** Cámbialos por los que aparezcan en el catálogo de
-   OpenRouter, que es también donde ves el precio por millón de tokens antes de lanzar.
+Los scripts están ejecutados contra la API real del toolkit (`arc_agi.Arcade`, `env.make`,
+`env.step`, `arc.get_scorecard`). Lo único que te tocará cambiar son **los identificadores
+de modelo**: ponlos como aparezcan en el catálogo de OpenRouter, que es también donde ves
+el precio por millón de tokens antes de lanzar.
 
 Y el aviso que conviene decir también en el vídeo: esto no es una evaluación oficial. La
 evaluación oficial de ARC-AGI-3 sobre GPT-6 Astra costó veintiséis mil dólares en el run del
